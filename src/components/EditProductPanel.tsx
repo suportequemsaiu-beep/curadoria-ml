@@ -25,12 +25,13 @@ export default function EditProductPanel({ product, affiliateLink, onSave, onCan
     deliveryEstimate: product.deliveryEstimate || "",
     link: product.link || "",
     affiliateLink: affiliateLink || "",
+    description: product.description || "",
   });
   const [errors, setErrors] = useState<EditFormErrors>({});
 
   const set =
     (key: keyof EditFormState) =>
-    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const val = e.target.value;
       setForm((prev) => ({ ...prev, [key]: val } as EditFormState));
     };
@@ -179,6 +180,18 @@ export default function EditProductPanel({ product, affiliateLink, onSave, onCan
               value={form.affiliateLink}
               onChange={set("affiliateLink")}
             />
+          </div>
+
+          <div className="field field-wide">
+            <label htmlFor="ed-description">Descrição/resumo do anúncio (opcional)</label>
+            <textarea
+              id="ed-description"
+              className="import-textarea"
+              value={form.description}
+              onChange={set("description")}
+              placeholder="Cole aqui parte da descrição do anúncio (ex.: volume, concentração, tipo)."
+            />
+            <p className="edit-note">Usado só para a análise automática de curadoria — não aparece na mensagem de WhatsApp.</p>
           </div>
 
           {product.imported && (

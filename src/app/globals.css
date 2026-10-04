@@ -328,3 +328,29 @@ a { color: var(--accent-strong); }
 @media (min-width: 900px) {
   .filters-form { grid-template-columns: repeat(4, 1fr); }
 }
+.analysis-box { display: flex; flex-direction: column; gap: 6px; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px 12px; }
+.analysis-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.analysis-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+.analysis-badge.an-apto { color: var(--good); background: var(--good-soft); border-color: var(--good); }
+.analysis-badge.an-revisar { color: var(--mid); background: var(--mid-soft); border-color: var(--mid); }
+.analysis-badge.an-nao_recomendado { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.analysis-toggle { align-self: flex-start; background: none; border: none; color: var(--accent-strong); font-weight: 700; font-size: 12px; padding: 2px 0; margin-top: 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.analysis-detail { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.analysis-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); }
+.analysis-row strong { color: var(--text); font-weight: 600; text-align: right; }
+.analysis-checklist { list-style: disc; margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px; }
+.approve-block { display: flex; flex-direction: column; gap: 8px; background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 10px 12px; }
+.approve-block p { margin: 0; font-size: 13px; color: var(--text); }
+.analysis-box { display: flex; flex-direction: column; gap: 6px; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px 12px; }
+.analysis-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.analysis-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+.analysis-badge.an-apto { color: var(--good); background: var(--good-soft); border-color: var(--good); }
+.analysis-badge.an-revisar { color: var(--mid); background: var(--mid-soft); border-color: var(--mid); }
+.analysis-badge.an-nao_recomendado { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.analysis-toggle { align-self: flex-start; background: none; border: none; color: var(--accent-strong); font-weight: 700; font-size: 12px; padding: 2px 0; margin-top: 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.analysis-detail { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.analysis-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); }
+.analysis-row strong { color: var(--text); font-weight: 600; text-align: right; }
+.analysis-checklist { list-style: disc; margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px; }
+.approve-block { display: flex; flex-direction: column; gap: 8px; background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 10px 12px; }
+.approve-block p { margin: 0; font-size: 13px; color: var(--text); }

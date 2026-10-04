@@ -1,86 +1,4 @@
-// Tipos compartilhados do Curadoria ML.
-// Espelham exatamente os formatos de dados usados no Artifact original.
-
-export type Condition = "novo" | "usado";
-export type Reputation = "alta" | "media" | "baixa" | null;
-export type Status = "novo" | "revisar" | "aprovado" | "descartado";
-export type ImportType = "id" | "link";
-
-export interface Product {
-  id: string | number;
-  title: string;
-  category: string;
-  icon: string;
-  price: number;
-  condition: Condition;
-  rating: number | null;
-  reviewCount: number | null;
-  seller: string;
-  reputation: Reputation;
-  freeShipping: boolean | null;
-  shippingCost: number | null;
-  deliveryEstimate: string;
-  link: string;
-  status: Status;
-  imported?: boolean;
-  edited?: boolean;
-  mlbId?: string;
-  importType?: ImportType;
-  sourceInput?: string;
-}
-
-export interface Filters {
-  query: string;
-  minPrice: string;
-  maxPrice: string;
-  minRating: string;
-  minReviews: string;
-  onlyNew: boolean;
-  prioritizeFreeShipping: boolean;
-}
-
-export interface ScorePoints {
-  price: number;
-  rating: number;
-  reviews: number;
-  shipping: number;
-  reputation: number;
-}
-
-export interface ScoreAvailable {
-  price: boolean;
-  rating: boolean;
-  reviews: boolean;
-  shipping: boolean;
-  reputation: boolean;
-}
-
-export interface ScoreResult {
-  score: number;
-  points: ScorePoints;
-  available: ScoreAvailable;
-}
-
-export interface ScoredProduct extends Product {
-  scoreResult: ScoreResult;
-}
-
-export interface ImportEntry {
-  line: string;
-  mlbId: string;
-  type: ImportType;
-  url?: string;
-}
-
-export interface ImportInvalidEntry {
-  line: string;
-  reason: string;
-}
-
-export interface ImportValidation {
-  valid: ImportEntry[];
-  invalid: ImportInvalidEntry[];
-}
+types parte1 OKcat
 
 export type EditReputation = "alta" | "media" | "baixa" | "sem_informacao";
 export type EditFreeShipping = "gratis" | "pago";
@@ -99,6 +17,7 @@ export interface EditFormState {
   deliveryEstimate: string;
   link: string;
   affiliateLink: string;
+  description: string;
 }
 
 export type EditFormErrors = Partial<Record<keyof EditFormState, string>>;
@@ -116,6 +35,7 @@ export interface EditedFields {
   shippingCost: number | null;
   deliveryEstimate: string;
   link: string;
+  description: string;
   edited: true;
 }
 
@@ -152,3 +72,4 @@ export interface PersistedState {
   notes: IdMap;
   filters: Filters;
 }
+types parte2 OKcat
