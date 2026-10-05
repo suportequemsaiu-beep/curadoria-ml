@@ -1,8 +1,10 @@
 import { getSupabaseAdmin } from "./supabaseAdmin";
+import { getValidAccessToken } from "./mlAuth";
 
-// --- Busca automática no Mercado Livre: usa a API pública de busca (não
-// precisa de login nem de app registrado) e salva os anúncios encontrados
-// na tabela "found_products" do Supabase, para a rota /api/found-products
+// --- Busca automática no Mercado Livre: usa a API de busca autenticada
+// (o Mercado Livre fechou o acesso sem login em 2026) com o token obtido
+// via login OAuth (src/lib/mlAuth.ts) e salva os anúncios encontrados na
+// tabela "found_products" do Supabase, para a rota /api/found-products
 // trazê-los depois para a lista de curadoria.
 //
 // Palavras-chave da busca: pensadas para o nicho de perfumes, beleza e
@@ -40,7 +42,7 @@ interface MlSearchResponse {
   results?: MlSearchItem[];
 }
 
-async function searchMercadoLivre(keyword: string): Promise<MlSearchItem[]> {
+async function searchMercadoLivre(keyword: string, accessToken: string): Promise<MlSearchItem[]> {
   const url =
     "https://api.mercadolibre.com/sites/MLB/search?q=" +
     encodeURIComponent(keyword) +
@@ -50,6 +52,7 @@ async function searchMercadoLivre(keyword: string): Promise<MlSearchItem[]> {
   const res = await fetch(url, {
     headers: {
       Accept: "application/json",
+      Authorization: "Bearer " + accessToken,
       "User-Agent": "Mozilla/5.0 (compatible; CuradoriaML/1.0; +https://curadoria-ml.vercel.app)",
     },
   });
@@ -77,9 +80,17 @@ export async function runMlSearch(): Promise<RunMlSearchResult[]> {
   const supabase = getSupabaseAdmin();
   const summary: RunMlSearchResult[] = [];
 
+  let accessToken: string;
+  try {
+    accessToken = await getValidAccessToken();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return SEARCH_KEYWORDS.map((keyword) => ({ keyword, found: 0, upserted: 0, error: message }));
+  }
+
   for (const keyword of SEARCH_KEYWORDS) {
     try {
-      const items = await searchMercadoLivre(keyword);
+      const items = await searchMercadoLivre(keyword, accessToken);
       const rows = items.map((item) => ({
         ml_id: item.id,
         title: item.title,

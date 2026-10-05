@@ -1,0 +1,147 @@
+import { getSupabaseAdmin } from "./supabaseAdmin";
+
+// --- Login OAuth com o Mercado Livre: desde que a API fechou a busca
+// pública sem autenticação, precisamos de um token obtido com a conta da
+// Janaína no Mercado Livre. O fluxo é: ela clica em "Conectar ao Mercado
+// Livre" (uma vez), faz login no site do Mercado Livre, e ele redireciona
+// de volta pra cá com um código que trocamos por um access_token (válido
+// 6h) e um refresh_token (válido ~6 meses, usado pra renovar sozinho sem
+// precisar logar de novo).
+
+const TOKEN_URL = "https://api.mercadolibre.com/oauth/token";
+const ROW_ID = "default";
+
+interface StoredToken {
+  id: string;
+  access_token: string;
+  refresh_token: string;
+  expires_at: string;
+  ml_user_id: string | null;
+}
+
+interface MlTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
+  user_id?: number;
+  refresh_token?: string;
+}
+
+function getClientCredentials() {
+  const clientId = process.env.ML_CLIENT_ID;
+  const clientSecret = process.env.ML_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("ML_CLIENT_ID/ML_CLIENT_SECRET não configurados no servidor.");
+  }
+  return { clientId, clientSecret };
+}
+
+function getRedirectUri(): string {
+  return process.env.ML_REDIRECT_URI || "https://curadoria-ml.vercel.app/api/auth/mercadolivre/callback";
+}
+
+export function getAuthorizationUrl(): string {
+  const { clientId } = getClientCredentials();
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: getRedirectUri(),
+  });
+  return "https://auth.mercadolivre.com.br/authorization?" + params.toString();
+}
+
+async function saveToken(data: MlTokenResponse): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
+  const row: Record<string, unknown> = {
+    id: ROW_ID,
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: expiresAt,
+    updated_at: new Date().toISOString(),
+  };
+  if (data.user_id != null) row.ml_user_id = String(data.user_id);
+
+  const { error } = await supabase.from("ml_oauth_token").upsert(row);
+  if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
+}
+
+export async function exchangeCodeForToken(code: string): Promise<void> {
+  const { clientId, clientSecret } = getClientCredentials();
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: clientId,
+    client_secret: clientSecret,
+    code,
+    redirect_uri: getRedirectUri(),
+  });
+
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: body.toString(),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error("Falha ao trocar código por token: HTTP " + res.status + (text ? " — " + text.slice(0, 300) : ""));
+  }
+  const data = (await res.json()) as MlTokenResponse;
+  await saveToken(data);
+}
+
+async function refreshAccessToken(refreshTokenValue: string): Promise<MlTokenResponse> {
+  const { clientId, clientSecret } = getClientCredentials();
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshTokenValue,
+  });
+
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: body.toString(),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      "Falha ao renovar o token do Mercado Livre (pode ser preciso reconectar): HTTP " +
+        res.status +
+        (text ? " — " + text.slice(0, 300) : "")
+    );
+  }
+  return (await res.json()) as MlTokenResponse;
+}
+
+// Retorna um access_token válido, renovando sozinho quando estiver perto de
+// expirar. Lança um erro com mensagem clara (mostrada na tela) quando ainda
+// não houver conexão feita.
+export async function getValidAccessToken(): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("ml_oauth_token")
+    .select("*")
+    .eq("id", ROW_ID)
+    .maybeSingle();
+
+  if (error) throw new Error("Falha ao ler o token do Mercado Livre: " + error.message);
+  if (!data) {
+    throw new Error(
+      'Ainda não há conexão com o Mercado Livre. Clique em "Conectar ao Mercado Livre" na tela para autorizar.'
+    );
+  }
+
+  const token = data as StoredToken;
+  const expiresAt = new Date(token.expires_at).getTime();
+  const fiveMinutes = 5 * 60 * 1000;
+
+  if (Date.now() < expiresAt - fiveMinutes) {
+    return token.access_token;
+  }
+
+  const refreshed = await refreshAccessToken(token.refresh_token);
+  await saveToken(refreshed);
+  return refreshed.access_token;
+}

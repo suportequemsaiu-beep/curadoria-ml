@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { searchNowAction } from "@/app/actions/searchNow";
 import Icon from "./Icon";
 
@@ -12,6 +12,39 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
   const [open, setOpen] = useState(true);
   const [searching, setSearching] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [connected, setConnected] = useState<boolean | null>(null);
+
+  const checkConnection = async () => {
+    try {
+      const res = await fetch("/api/auth/mercadolivre/status");
+      const data = await res.json();
+      setConnected(!!data.connected);
+    } catch {
+      setConnected(null);
+    }
+  };
+
+  useEffect(() => {
+    checkConnection();
+
+    // Mostra o resultado do login (volta do redirecionamento do Mercado Livre)
+    // e limpa os parâmetros da URL pra não reaparecer se a página recarregar.
+    const params = new URLSearchParams(window.location.search);
+    const authResult = params.get("ml_auth");
+    if (authResult === "ok") {
+      setFeedback("Conectado ao Mercado Livre com sucesso!");
+    } else if (authResult === "erro") {
+      const detail = params.get("ml_auth_detail");
+      setFeedback("Não foi possível conectar ao Mercado Livre" + (detail ? ": " + detail : "."));
+    }
+    if (authResult) {
+      params.delete("ml_auth");
+      params.delete("ml_auth_detail");
+      const newSearch = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (newSearch ? "?" + newSearch : ""));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearchNow = async () => {
     setSearching(true);
@@ -24,9 +57,7 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
         const total = summary.reduce((sum, s) => sum + s.found, 0);
         const withError = summary.find((s) => s.error);
         if (withError) {
-          setFeedback(
-            'Busca com problema em "' + withError.keyword + '": ' + withError.error
-          );
+          setFeedback('Busca com problema em "' + withError.keyword + '": ' + withError.error);
         } else {
           setFeedback(
             total > 0
@@ -34,6 +65,7 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
               : "Busca concluída: nenhum anúncio encontrado agora."
           );
         }
+        checkConnection();
       } else {
         setFeedback("Não foi possível buscar agora" + (result.error ? ": " + result.error : "."));
       }
@@ -65,6 +97,12 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
           </p>
 
           <div className="import-actions">
+            {connected === false && (
+              <a href="/api/auth/mercadolivre/start" className="btn btn-outline">
+                Conectar ao Mercado Livre
+              </a>
+            )}
+            {connected === true && <span className="import-summary-ok">Conectado ao Mercado Livre</span>}
             <button type="button" className="btn btn-primary" onClick={handleSearchNow} disabled={searching}>
               {searching ? "Buscando..." : "Buscar agora no Mercado Livre"}
             </button>
@@ -73,8 +111,9 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
           {feedback && <p className="import-confirmation">{feedback}</p>}
 
           <p className="import-note">
-            A busca usa a API pública de busca do Mercado Livre (sem login) com palavras-chave fixas, escolhidas para
-            o nicho de perfumes, beleza e autocuidado. Me avise se quiser mudar as palavras-chave usadas.
+            A busca usa login oficial (OAuth) com sua conta do Mercado Livre — a API ficou sem acesso público em
+            2026, então essa conexão é necessária. Palavras-chave fixas, escolhidas para o nicho de perfumes, beleza
+            e autocuidado. Me avise se quiser mudar.
           </p>
         </div>
       )}
