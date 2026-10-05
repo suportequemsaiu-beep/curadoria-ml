@@ -9,6 +9,7 @@ import { computeScore } from "@/lib/score";
 import { EditedFields, Filters, IdMap, Product, ScoredProduct, Status } from "@/lib/types";
 import FiltersPanel from "./FiltersPanel";
 import ImportPanel from "./ImportPanel";
+import MlSearchPanel from "./MlSearchPanel";
 import { StatusChip } from "./StatusBadges";
 import ProductCard from "./ProductCard";
 import EmptyState from "./EmptyState";
@@ -39,6 +40,37 @@ export default function CuradoriaApp() {
     if (!hydrated) return;
     savePersistedState({ products, affiliateLinks, drafts, notes, filters });
   }, [hydrated, products, affiliateLinks, drafts, notes, filters]);
+
+  // Mescla anúncios já encontrados pela busca automática (ou pela própria
+  // busca manual) sem duplicar produtos pelo id do Mercado Livre.
+  const mergeFoundProducts = (incoming: Product[]) => {
+    if (!incoming || incoming.length === 0) return;
+    setProducts((prev) => {
+      const existingIds = new Set(prev.map((p) => p.mlbId).filter((v): v is string => !!v));
+      const fresh = incoming.filter((p) => !p.mlbId || !existingIds.has(p.mlbId));
+      if (fresh.length === 0) return prev;
+      return [...prev, ...fresh];
+    });
+  };
+
+  const fetchFoundProducts = async () => {
+    try {
+      const res = await fetch("/api/found-products");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.products)) {
+        mergeFoundProducts(data.products as Product[]);
+      }
+    } catch {
+      // Busca automática é um bônus: uma falha aqui não deve quebrar a tela.
+    }
+  };
+
+  useEffect(() => {
+    if (!hydrated) return;
+    fetchFoundProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   const handleClearDeviceData = () => {
     clearPersistedState();
@@ -155,6 +187,8 @@ export default function CuradoriaApp() {
           onClear={handleClear}
         />
 
+        <MlSearchPanel onFoundProducts={fetchFoundProducts} />
+
         <ImportPanel existingMlbIds={existingMlbIds} onImport={handleImportProducts} />
 
         <section className="summary-row" aria-label="Resumo da curadoria">
@@ -170,7 +204,7 @@ export default function CuradoriaApp() {
           <span>Ordenado por score{filters.prioritizeFreeShipping ? " · frete grátis em destaque" : ""}</span>
         </div>
         <p className="score-note">
-          O score de triagem (0–100) ajuda a ordenar os resultados fictícios; a decisão de publicar é sempre sua.
+          O score de triagem (0–100) ajuda a ordenar os resultados; a decisão de publicar é sempre sua.
         </p>
 
         {visible.length === 0 ? (
@@ -204,7 +238,8 @@ export default function CuradoriaApp() {
         />
 
         <p className="disclaimer">
-          Dados fictícios para demonstração — sem integração real com Mercado Livre, Shopee, WhatsApp ou links de
+          Produtos de exemplo (fictícios) e anúncios reais encontrados automaticamente no Mercado Livre aparecem
+          juntos nesta lista — ainda sem integração com Shopee, WhatsApp ou preenchimento automático de links de
           afiliado nesta etapa.
         </p>
       </main>

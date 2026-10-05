@@ -1,0 +1,19 @@
+name: Busca automática no Mercado Livre
+
+on:
+  schedule:
+    # Roda 6x por dia (a cada 4h, em UTC). O Vercel Hobby só permite cron
+    # 1x/dia, por isso usamos o GitHub Actions (gratuito) para chamar a
+    # rota protegida com mais frequência.
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar rota de busca
+        run: |
+          curl -sS -f \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://curadoria-ml.vercel.app/api/cron/search-ml"
