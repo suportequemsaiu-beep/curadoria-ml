@@ -20,12 +20,20 @@ export default function MlSearchPanel({ onFoundProducts }: MlSearchPanelProps) {
       const result = await searchNowAction();
       if (result.ok) {
         onFoundProducts();
-        const total = (result.summary || []).reduce((sum, s) => sum + s.found, 0);
-        setFeedback(
-          total > 0
-            ? "Busca concluída: " + total + " anúncio(s) verificados no Mercado Livre."
-            : "Busca concluída: nenhum anúncio encontrado agora."
-        );
+        const summary = result.summary || [];
+        const total = summary.reduce((sum, s) => sum + s.found, 0);
+        const withError = summary.find((s) => s.error);
+        if (withError) {
+          setFeedback(
+            'Busca com problema em "' + withError.keyword + '": ' + withError.error
+          );
+        } else {
+          setFeedback(
+            total > 0
+              ? "Busca concluída: " + total + " anúncio(s) verificados no Mercado Livre."
+              : "Busca concluída: nenhum anúncio encontrado agora."
+          );
+        }
       } else {
         setFeedback("Não foi possível buscar agora" + (result.error ? ": " + result.error : "."));
       }

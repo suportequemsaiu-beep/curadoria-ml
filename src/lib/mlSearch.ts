@@ -47,9 +47,17 @@ async function searchMercadoLivre(keyword: string): Promise<MlSearchItem[]> {
     "&limit=" +
     RESULTS_PER_KEYWORD;
 
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; CuradoriaML/1.0; +https://curadoria-ml.vercel.app)",
+    },
+  });
   if (!res.ok) {
-    throw new Error('Falha ao buscar "' + keyword + '" no Mercado Livre: HTTP ' + res.status);
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      'Falha ao buscar "' + keyword + '" no Mercado Livre: HTTP ' + res.status + (body ? " — " + body.slice(0, 200) : "")
+    );
   }
   const data = (await res.json()) as MlSearchResponse;
   return Array.isArray(data.results) ? data.results : [];
