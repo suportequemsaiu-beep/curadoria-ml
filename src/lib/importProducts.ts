@@ -1,7 +1,11 @@
-import { ImportEntry, ImportValidation, Product } from "./types";
+import { ImportEntry, ImportValidation, Product, Reputation } from "./types";
+import { mapCondition } from "./foundProducts";
 
-// --- Importação manual simulada de links/IDs do Mercado Livre. Sem API real:
-// cada entrada válida vira um produto fictício, marcado como importado.
+// --- Importação manual de links/IDs do Mercado Livre. Esta função só valida
+// o formato do que foi colado (sem fazer nenhuma chamada de rede). Os dados
+// reais do anúncio são buscados depois, na Server Action
+// src/app/actions/importProduct.ts, usando o login OAuth já feito com o
+// Mercado Livre — nada aqui é inventado.
 const MLB_ID_RE = /MLB-?(\d{5,})/i;
 
 export function validateImportText(text: string): ImportValidation {
@@ -59,63 +63,81 @@ export function validateImportText(text: string): ImportValidation {
   return { valid, invalid };
 }
 
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+// --- Mapeamento dos dados reais vindos da API do Mercado Livre para o
+// formato de Product usado no resto do app. Fica aqui (sem nenhuma chamada
+// de rede) para poder ser usado e testado separadamente da Server Action que
+// faz as requisições.
+
+export interface MlItemShipping {
+  free_shipping?: boolean;
 }
 
-function weightedReputation(): "alta" | "media" | "baixa" {
-  const r = Math.random();
-  if (r < 0.6) return "alta";
-  if (r < 0.9) return "media";
-  return "baixa";
+export interface MlItemData {
+  id?: string;
+  title: string;
+  price: number;
+  currency_id?: string;
+  condition?: string | null;
+  permalink?: string;
+  category_id?: string;
+  seller_id?: number;
+  shipping?: MlItemShipping;
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+export interface MlSellerData {
+  nickname?: string;
+  seller_reputation?: { level_id?: string | null } | null;
 }
 
-const IMPORT_CATEGORIES = [
-  { name: "Tecnologia", icon: "tecnologia" },
-  { name: "Games", icon: "games" },
-  { name: "Setup", icon: "setup" },
-  { name: "Acessórios para celular", icon: "acessorios" },
-  { name: "Estudo", icon: "estudo" },
-];
-const IMPORT_NAME_PARTS = [
-  "Mouse óptico", "Teclado slim", "Carregador portátil", "Suporte ajustável",
-  "Fone intra-auricular", "Cabo reforçado", "Luminária USB", "Organizador de mesa",
-  "Case protetor", "Adaptador multiportas",
-];
-const IMPORT_BRANDS = ["NexTech", "ZenPro", "UrbanGear", "BrightLine", "CoreFit", "PixelWave"];
-const IMPORT_SELLERS = ["Loja Horizonte", "TechCasa", "Ponto Certo Store", "Vitrine Digital", "Comércio Rápido MG"];
-const IMPORT_DELIVERY = ["5 a 9 dias úteis", "7 a 12 dias úteis", "4 a 8 dias úteis", "6 a 11 dias úteis"];
+// Converte o nível de reputação do vendedor (ex.: "5_green") na mesma escala
+// alta/média/baixa usada no resto do app. Qualquer nível não reconhecido
+// (incluindo vendedores novos, sem reputação ainda) fica como "não informada".
+function mapSellerReputation(levelId?: string | null): Reputation {
+  switch (levelId) {
+    case "5_green":
+      return "alta";
+    case "4_light_green":
+    case "3_yellow":
+      return "media";
+    case "2_orange":
+    case "1_red":
+      return "baixa";
+    default:
+      return null;
+  }
+}
 
-export function generateImportedProduct(entry: ImportEntry): Product {
-  const category = pickRandom(IMPORT_CATEGORIES);
-  const brand = pickRandom(IMPORT_BRANDS);
-  const namePart = pickRandom(IMPORT_NAME_PARTS);
-  const suffix = entry.mlbId.slice(-4);
-  const freeShipping = Math.random() < 0.7;
-
+export function mlItemToProduct(
+  entry: ImportEntry,
+  item: MlItemData,
+  seller: MlSellerData | null,
+  categoryName: string | null
+): Product {
   return {
     id: "imp-" + entry.mlbId,
-    title: brand + " " + namePart + " " + suffix,
-    category: category.name,
-    icon: category.icon,
-    price: round2(29.9 + Math.random() * 320),
-    condition: Math.random() < 0.9 ? "novo" : "usado",
-    rating: round2(3.6 + Math.random() * 1.3),
-    reviewCount: Math.floor(5 + Math.random() * 295),
-    seller: pickRandom(IMPORT_SELLERS),
-    reputation: weightedReputation(),
-    freeShipping,
-    shippingCost: freeShipping ? null : round2(9.9 + Math.random() * 20),
-    deliveryEstimate: pickRandom(IMPORT_DELIVERY),
-    link: entry.type === "link" ? entry.url ?? "" : "https://lista.mercadolivre.com.br/" + entry.mlbId,
+    title: item.title,
+    category: categoryName || item.category_id || "Mercado Livre",
+    icon: "acessorios",
+    price: typeof item.price === "number" && !Number.isNaN(item.price) ? item.price : 0,
+    condition: mapCondition(item.condition ?? null),
+    // A API de item do Mercado Livre não devolve nota média nem quantidade de
+    // avaliações — por isso esses dois campos continuam como "não informado"
+    // (igual aos produtos achados pela busca automática), em vez de inventar
+    // um valor como a versão anterior desta função fazia.
+    rating: null,
+    reviewCount: null,
+    seller: seller?.nickname || "Vendedor do Mercado Livre",
+    reputation: mapSellerReputation(seller?.seller_reputation?.level_id ?? null),
+    freeShipping: item.shipping?.free_shipping ?? null,
+    shippingCost: null,
+    deliveryEstimate: "Ver prazo de entrega no anúncio",
+    link: item.permalink || entry.url || "https://lista.mercadolivre.com.br/" + entry.mlbId,
     status: "novo",
     imported: true,
     mlbId: entry.mlbId,
     importType: entry.type,
     sourceInput: entry.line,
+    description:
+      "Importado com os dados reais do anúncio no Mercado Livre (título, preço, condição, frete e, quando disponível, reputação do vendedor). Nota e avaliações não são informadas pela API para este tipo de consulta — confira no próprio anúncio antes de publicar.",
   };
 }

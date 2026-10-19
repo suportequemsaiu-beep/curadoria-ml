@@ -22,7 +22,7 @@ export interface FoundProductRow {
   raw?: unknown;
 }
 
-function mapCondition(condition: string | null): Condition {
+export function mapCondition(condition: string | null): Condition {
   return condition === "used" ? "usado" : "novo";
 }
 

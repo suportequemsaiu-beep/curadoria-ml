@@ -1,5 +1,6 @@
 import { ChangeEvent, useState } from "react";
-import { generateImportedProduct, validateImportText } from "@/lib/importProducts";
+import { validateImportText } from "@/lib/importProducts";
+import { importRealProductsAction } from "@/app/actions/importProduct";
 import { ImportValidation, Product } from "@/lib/types";
 import Icon from "./Icon";
 
@@ -13,51 +14,77 @@ export default function ImportPanel({ existingMlbIds, onImport }: ImportPanelPro
   const [text, setText] = useState("");
   const [result, setResult] = useState<ImportValidation | null>(null);
   const [confirmation, setConfirmation] = useState("");
+  const [errorLines, setErrorLines] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleChangeText = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     setResult(null);
     setConfirmation("");
+    setErrorLines([]);
   };
   const handleValidate = () => {
     setResult(validateImportText(text));
     setConfirmation("");
+    setErrorLines([]);
   };
   const handleClear = () => {
     setText("");
     setResult(null);
     setConfirmation("");
+    setErrorLines([]);
   };
-  const handleAdd = () => {
-    if (!result || result.valid.length === 0) return;
-    let added = 0;
-    let crossDup = 0;
-    const toAdd: Product[] = [];
-    result.valid.forEach((entry) => {
-      if (existingMlbIds.has(entry.mlbId)) {
-        crossDup++;
-        return;
-      }
-      toAdd.push(generateImportedProduct(entry));
-      added++;
-    });
-    if (toAdd.length > 0) onImport(toAdd);
 
-    let msg = added === 1 ? "1 produto adicionado." : added + " produtos adicionados.";
-    if (crossDup > 0)
-      msg +=
-        " " +
-        crossDup +
-        (crossDup === 1 ? " entrada ignorada" : " entradas ignoradas") +
-        " por duplicidade (já importadas antes).";
-    if (result.invalid.length > 0)
-      msg +=
-        " " +
-        result.invalid.length +
-        (result.invalid.length === 1 ? " linha inválida não foi usada." : " linhas inválidas não foram usadas.");
-    setConfirmation(msg);
-    setText("");
-    setResult(null);
+  const handleAdd = async () => {
+    if (!result || result.valid.length === 0) return;
+
+    const toFetch = result.valid.filter((entry) => !existingMlbIds.has(entry.mlbId));
+    const crossDup = result.valid.length - toFetch.length;
+
+    if (toFetch.length === 0) {
+      setConfirmation("Nenhuma entrada nova: todas já tinham sido importadas antes.");
+      setErrorLines([]);
+      return;
+    }
+
+    setLoading(true);
+    setConfirmation("");
+    setErrorLines([]);
+    try {
+      const results = await importRealProductsAction(toFetch);
+      const products = results.filter((r) => r.ok && r.product).map((r) => r.product as Product);
+      const failures = results.filter((r) => !r.ok);
+
+      if (products.length > 0) onImport(products);
+
+      let msg =
+        products.length === 1
+          ? "1 produto importado com dados reais do Mercado Livre."
+          : products.length + " produtos importados com dados reais do Mercado Livre.";
+      if (crossDup > 0)
+        msg +=
+          " " +
+          crossDup +
+          (crossDup === 1 ? " entrada ignorada" : " entradas ignoradas") +
+          " por duplicidade (já importadas antes).";
+      if (result.invalid.length > 0)
+        msg +=
+          " " +
+          result.invalid.length +
+          (result.invalid.length === 1 ? " linha inválida não foi usada." : " linhas inválidas não foram usadas.");
+      if (failures.length > 0)
+        msg +=
+          " " +
+          failures.length +
+          (failures.length === 1 ? " entrada não pôde ser importada." : " entradas não puderam ser importadas.");
+
+      setConfirmation(msg);
+      setErrorLines(failures.map((f) => f.entry.mlbId + ": " + (f.error || "erro desconhecido")));
+      setText("");
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasValid = !!(result && result.valid.length > 0);
@@ -93,13 +120,13 @@ export default function ImportPanel({ existingMlbIds, onImport }: ImportPanelPro
           </p>
 
           <div className="import-actions">
-            <button type="button" className="btn btn-outline" onClick={handleValidate}>
+            <button type="button" className="btn btn-outline" onClick={handleValidate} disabled={loading}>
               Validar entradas
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleAdd} disabled={!hasValid}>
-              Adicionar produtos válidos
+            <button type="button" className="btn btn-primary" onClick={handleAdd} disabled={!hasValid || loading}>
+              {loading ? "Buscando no Mercado Livre…" : "Adicionar produtos válidos"}
             </button>
-            <button type="button" className="btn btn-ghost" onClick={handleClear}>
+            <button type="button" className="btn btn-ghost" onClick={handleClear} disabled={loading}>
               Limpar
             </button>
           </div>
@@ -129,9 +156,18 @@ export default function ImportPanel({ existingMlbIds, onImport }: ImportPanelPro
 
           {confirmation && <p className="import-confirmation">{confirmation}</p>}
 
+          {errorLines.length > 0 && (
+            <ul className="import-invalid-list">
+              {errorLines.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          )}
+
           <p className="import-note">
-            Os dados dos produtos importados são simulados e serão substituídos por uma consulta autorizada a uma
-            API oficial em uma etapa futura.
+            Os dados são buscados de verdade na API do Mercado Livre (é preciso estar conectado — veja o painel de
+            busca automática acima). Nota e quantidade de avaliações não são informadas pela API para esse tipo de
+            consulta e ficam como &quot;não informado&quot;.
           </p>
         </div>
       )}
