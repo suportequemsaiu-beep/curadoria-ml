@@ -12,10 +12,14 @@ export function matchesFilters(p: Product, f: Filters): boolean {
   const maxPrice = parseFloat(f.maxPrice);
   if (!Number.isNaN(maxPrice) && p.price > maxPrice) return false;
   // Nota mínima aceita vírgula ou ponto como separador decimal (ex.: "4,7" ou "4.7").
+  // Produtos sem nota/avaliações informadas (ex.: anúncios achados automaticamente no
+  // Mercado Livre, que não trazem esse dado) NÃO são excluídos por esses filtros — só
+  // produtos que de fato têm o dado e ficam abaixo do mínimo são removidos. Do
+  // contrário, qualquer valor nesses filtros escondia 100% dos produtos reais do ML.
   const minRating = parseFloat((f.minRating || "").replace(",", "."));
-  if (!Number.isNaN(minRating) && (p.rating ?? 0) < minRating) return false;
+  if (!Number.isNaN(minRating) && p.rating != null && p.rating < minRating) return false;
   const minReviews = parseFloat(f.minReviews);
-  if (!Number.isNaN(minReviews) && (p.reviewCount ?? 0) < minReviews) return false;
+  if (!Number.isNaN(minReviews) && p.reviewCount != null && p.reviewCount < minReviews) return false;
   if (f.onlyNew && p.condition !== "novo") return false;
   return true;
 }
