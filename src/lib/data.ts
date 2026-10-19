@@ -26,8 +26,11 @@ export const REPUTATION_LABEL: Record<string, string> = {
 };
 
 // Dados fictícios para demonstração — sem integração real com Mercado Livre,
-// Shopee, WhatsApp ou links de afiliado nesta etapa.
-export const PRODUCTS: Product[] = [
+// Shopee, WhatsApp ou links de afiliado nesta etapa. Todo item aqui recebe
+// `demo: true` (ver abaixo) para que a tela possa marcar claramente que não é
+// um produto real, evitando confusão com os anúncios reais trazidos pela
+// busca automática ou pela importação manual.
+const RAW_DEMO_PRODUCTS: Product[] = [
   { id: 1, title: "Mouse sem fio NovaTech M220", category: "Tecnologia", icon: "tecnologia", price: 89.9, condition: "novo", rating: 4.6, reviewCount: 328, seller: "TechPoint Brasil", reputation: "alta", freeShipping: true, shippingCost: null, deliveryEstimate: "5 a 8 dias úteis", link: "https://example.com/anuncio/mouse-novatech-m220", status: "novo" },
   { id: 2, title: "Teclado mecânico RedForce K68 RGB", category: "Games", icon: "games", price: 219.9, condition: "novo", rating: 4.4, reviewCount: 156, seller: "GamerZone Store", reputation: "alta", freeShipping: true, shippingCost: null, deliveryEstimate: "6 a 10 dias úteis", link: "https://example.com/anuncio/teclado-redforce-k68", status: "novo" },
   { id: 3, title: "Headset gamer SoundWave H3", category: "Games", icon: "games", price: 134.5, condition: "novo", rating: 4.1, reviewCount: 92, seller: "AudioMais", reputation: "media", freeShipping: false, shippingCost: 19.9, deliveryEstimate: "7 a 12 dias úteis", link: "https://example.com/anuncio/headset-soundwave-h3", status: "novo" },
@@ -44,3 +47,5 @@ export const PRODUCTS: Product[] = [
   { id: 14, title: "Hub USB-C 7 em 1 ConnectAll Hub", category: "Tecnologia", icon: "tecnologia", price: 87.5, condition: "novo", rating: 4.5, reviewCount: 143, seller: "TechPoint Brasil", reputation: "alta", freeShipping: true, shippingCost: null, deliveryEstimate: "5 a 9 dias úteis", link: "https://example.com/anuncio/hub-connectall-7in1", status: "novo" },
   { id: 15, title: "Caderno inteligente reutilizável SmartNote Reuse", category: "Estudo", icon: "estudo", price: 64.9, condition: "novo", rating: 4.1, reviewCount: 58, seller: "PapelariaCriativa", reputation: "media", freeShipping: false, shippingCost: 12.9, deliveryEstimate: "7 a 11 dias úteis", link: "https://example.com/anuncio/caderno-smartnote-reuse", status: "novo" },
 ];
+
+export const PRODUCTS: Product[] = RAW_DEMO_PRODUCTS.map((p) => ({ ...p, demo: true }));

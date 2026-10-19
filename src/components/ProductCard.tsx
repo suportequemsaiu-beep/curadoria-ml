@@ -119,6 +119,13 @@ export default function ProductCard({
         </span>
       )}
 
+      {p.demo && (
+        <span className="badge-imported badge-demo">
+          <Icon name="demo" size={12} />
+          Produto de demonstração (fictício, não é um anúncio real)
+        </span>
+      )}
+
       <StatusPill status={p.status} />
 
       <div className="price-row">

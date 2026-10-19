@@ -23,6 +23,7 @@ export interface Product {
   link: string;
   status: Status;
   imported?: boolean;
+  demo?: boolean;
   edited?: boolean;
   mlbId?: string;
   importType?: ImportType;

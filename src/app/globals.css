@@ -180,6 +180,9 @@ a { color: var(--accent-strong); }
   align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
   color: var(--accent-strong); background: var(--accent-soft); border-radius: 999px; padding: 3px 9px; margin-top: -2px;
 }
+.badge-demo {
+  color: var(--bad); background: var(--bad-soft, var(--neutral-soft));
+}
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-strong); }
 .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }

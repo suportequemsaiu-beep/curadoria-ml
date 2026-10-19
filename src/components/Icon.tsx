@@ -141,6 +141,14 @@ export default function Icon({ name, size = 18 }: IconProps) {
           <path d="M9 3v4h6" />
         </svg>
       );
+    case "demo":
+      return (
+        <svg {...common}>
+          <path d="M9 3h6" />
+          <path d="M10 3v5.5L5 18a1.5 1.5 0 0 0 1.3 2.2h11.4A1.5 1.5 0 0 0 19 18l-5-9.5V3" />
+          <line x1="7.5" y1="14" x2="16.5" y2="14" />
+        </svg>
+      );
     case "notes":
       return (
         <svg {...common}>
