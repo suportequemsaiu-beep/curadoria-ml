@@ -83,7 +83,6 @@ async function saveToken(data: MlTokenResponse): Promise<void> {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: expiresAt,
-    updated_at: new Date().toISOString(),
   };
   if (data.user_id != null) row.ml_user_id = String(data.user_id);
 
