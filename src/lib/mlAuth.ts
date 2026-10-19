@@ -99,7 +99,11 @@ async function saveToken(data: MlTokenResponse): Promise<void> {
     const { error } = await supabase.from("ml_oauth_token").update(row).eq("id", existing.id);
     if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
   } else {
-    const { error } = await supabase.from("ml_oauth_token").insert(row);
+    // A tabela tem uma coluna "created_at" obrigatória (NOT NULL, sem valor
+    // padrão) — só precisa ser preenchida na primeira linha (inserção).
+    const { error } = await supabase
+      .from("ml_oauth_token")
+      .insert({ ...row, created_at: new Date().toISOString() });
     if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
   }
 }
