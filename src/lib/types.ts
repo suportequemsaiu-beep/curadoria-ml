@@ -19,6 +19,7 @@ export interface Product {
   reputation: Reputation;
   freeShipping: boolean | null;
   shippingCost: number | null;
+  soldQuantity?: number | null;
   deliveryEstimate: string;
   link: string;
   status: Status;
@@ -37,6 +38,7 @@ export interface Filters {
   maxPrice: string;
   minRating: string;
   minReviews: string;
+  minSold: string;
   onlyNew: boolean;
   prioritizeFreeShipping: boolean;
 }

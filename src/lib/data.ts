@@ -6,6 +6,7 @@ export const DEFAULT_FILTERS: Filters = {
   maxPrice: "",
   minRating: "",
   minReviews: "",
+  minSold: "",
   onlyNew: false,
   prioritizeFreeShipping: false,
 };

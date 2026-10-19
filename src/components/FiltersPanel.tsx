@@ -97,6 +97,18 @@ export default function FiltersPanel({ filters, setFilters, open, onToggle, onAp
               onChange={set("minReviews")}
             />
           </div>
+          <div className="field">
+            <label htmlFor="f-min-sold">Quantidade vendida (mínimo)</label>
+            <input
+              id="f-min-sold"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Ex.: 20"
+              value={filters.minSold}
+              onChange={set("minSold")}
+            />
+          </div>
           <div className="field field-check">
             <label htmlFor="f-only-new">
               <input id="f-only-new" type="checkbox" checked={filters.onlyNew} onChange={set("onlyNew")} />

@@ -81,6 +81,7 @@ export interface MlItemData {
   permalink?: string;
   category_id?: string;
   seller_id?: number;
+  sold_quantity?: number;
   shipping?: MlItemShipping;
 }
 
@@ -130,6 +131,7 @@ export function mlItemToProduct(
     reputation: mapSellerReputation(seller?.seller_reputation?.level_id ?? null),
     freeShipping: item.shipping?.free_shipping ?? null,
     shippingCost: null,
+    soldQuantity: typeof item.sold_quantity === "number" ? item.sold_quantity : null,
     deliveryEstimate: "Ver prazo de entrega no anúncio",
     link: item.permalink || entry.url || "https://lista.mercadolivre.com.br/" + entry.mlbId,
     status: "novo",

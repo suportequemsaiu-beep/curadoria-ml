@@ -145,6 +145,9 @@ export default function ProductCard({
         <span className="rating-count">
           {p.reviewCount != null ? "(" + p.reviewCount + " avaliações)" : "(avaliações não informadas)"}
         </span>
+        {p.soldQuantity != null && (
+          <span className="rating-count">· {p.soldQuantity} vendido{p.soldQuantity === 1 ? "" : "s"}</span>
+        )}
       </div>
 
       <div className="seller-row">

@@ -20,6 +20,11 @@ export function matchesFilters(p: Product, f: Filters): boolean {
   if (!Number.isNaN(minRating) && p.rating != null && p.rating < minRating) return false;
   const minReviews = parseFloat(f.minReviews);
   if (!Number.isNaN(minReviews) && p.reviewCount != null && p.reviewCount < minReviews) return false;
+  // Quantidade vendida: o Mercado Livre informa isso mesmo quando não manda nota
+  // nem avaliações, então esse filtro funciona pros produtos achados pelo ML
+  // (ao contrário dos dois acima). Mesma regra: sem o dado, não exclui.
+  const minSold = parseFloat(f.minSold);
+  if (!Number.isNaN(minSold) && p.soldQuantity != null && p.soldQuantity < minSold) return false;
   if (f.onlyNew && p.condition !== "novo") return false;
   return true;
 }

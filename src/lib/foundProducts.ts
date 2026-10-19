@@ -43,6 +43,7 @@ export function foundRowToProduct(row: FoundProductRow): Product {
     reputation: null,
     freeShipping: row.free_shipping ?? null,
     shippingCost: null,
+    soldQuantity: row.sold_quantity ?? null,
     deliveryEstimate: "Ver prazo de entrega no anúncio",
     link: row.permalink,
     status: "novo",
