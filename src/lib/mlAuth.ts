@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 
 // --- Login OAuth com o Mercado Livre: desde que a API fechou a busca
@@ -7,6 +8,12 @@ import { getSupabaseAdmin } from "./supabaseAdmin";
 // de volta pra cá com um código que trocamos por um access_token (válido
 // 6h) e um refresh_token (válido ~6 meses, usado pra renovar sozinho sem
 // precisar logar de novo).
+//
+// A aplicação exige PKCE (obrigatório para apps novos no Mercado Livre):
+// geramos um "code_verifier" aleatório, mandamos seu hash (code_challenge)
+// na URL de login, guardamos o verifier num cookie temporário, e devolvemos
+// ele na troca do código por token — prova que quem está trocando o código
+// é a mesma pessoa que iniciou o login.
 
 const TOKEN_URL = "https://api.mercadolibre.com/oauth/token";
 const ROW_ID = "default";
@@ -41,12 +48,27 @@ function getRedirectUri(): string {
   return process.env.ML_REDIRECT_URI || "https://curadoria-ml.vercel.app/api/auth/mercadolivre/callback";
 }
 
-export function getAuthorizationUrl(): string {
+// base64url sem padding, como o padrão PKCE (RFC 7636) exige.
+function base64url(buffer: Buffer): string {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export function generateCodeVerifier(): string {
+  return base64url(randomBytes(32));
+}
+
+function codeChallengeFromVerifier(verifier: string): string {
+  return base64url(createHash("sha256").update(verifier).digest());
+}
+
+export function getAuthorizationUrl(codeVerifier: string): string {
   const { clientId } = getClientCredentials();
   const params = new URLSearchParams({
     response_type: "code",
     client_id: clientId,
     redirect_uri: getRedirectUri(),
+    code_challenge: codeChallengeFromVerifier(codeVerifier),
+    code_challenge_method: "S256",
   });
   return "https://auth.mercadolivre.com.br/authorization?" + params.toString();
 }
@@ -67,7 +89,7 @@ async function saveToken(data: MlTokenResponse): Promise<void> {
   if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
 }
 
-export async function exchangeCodeForToken(code: string): Promise<void> {
+export async function exchangeCodeForToken(code: string, codeVerifier: string): Promise<void> {
   const { clientId, clientSecret } = getClientCredentials();
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -75,6 +97,7 @@ export async function exchangeCodeForToken(code: string): Promise<void> {
     client_secret: clientSecret,
     code,
     redirect_uri: getRedirectUri(),
+    code_verifier: codeVerifier,
   });
 
   const res = await fetch(TOKEN_URL, {
