@@ -11,7 +11,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("ml_oauth_token")
       .select("ml_user_id, updated_at")
-      .eq("id", "default")
+      .limit(1)
       .maybeSingle();
 
     if (error) {

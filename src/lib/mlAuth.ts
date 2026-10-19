@@ -16,10 +16,13 @@ import { getSupabaseAdmin } from "./supabaseAdmin";
 // é a mesma pessoa que iniciou o login.
 
 const TOKEN_URL = "https://api.mercadolibre.com/oauth/token";
-const ROW_ID = "default";
+// A tabela ml_oauth_token guarda no máximo uma linha (a conexão atual). Em
+// vez de depender de um id fixo (cujo tipo pode variar conforme como a
+// tabela foi criada no Supabase), sempre lemos/atualizamos "a única linha
+// que existir", criando uma nova só se ainda não houver nenhuma.
 
 interface StoredToken {
-  id: string;
+  id: string | number;
   access_token: string;
   refresh_token: string;
   expires_at: string;
@@ -77,7 +80,6 @@ async function saveToken(data: MlTokenResponse): Promise<void> {
   const supabase = getSupabaseAdmin();
   const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
   const row: Record<string, unknown> = {
-    id: ROW_ID,
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: expiresAt,
@@ -85,8 +87,22 @@ async function saveToken(data: MlTokenResponse): Promise<void> {
   };
   if (data.user_id != null) row.ml_user_id = String(data.user_id);
 
-  const { error } = await supabase.from("ml_oauth_token").upsert(row);
-  if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
+  const { data: existing, error: selectError } = await supabase
+    .from("ml_oauth_token")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+  if (selectError) {
+    throw new Error("Falha ao verificar token existente do Mercado Livre: " + selectError.message);
+  }
+
+  if (existing?.id != null) {
+    const { error } = await supabase.from("ml_oauth_token").update(row).eq("id", existing.id);
+    if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
+  } else {
+    const { error } = await supabase.from("ml_oauth_token").insert(row);
+    if (error) throw new Error("Falha ao salvar token do Mercado Livre: " + error.message);
+  }
 }
 
 export async function exchangeCodeForToken(code: string, codeVerifier: string): Promise<void> {
@@ -146,7 +162,7 @@ export async function getValidAccessToken(): Promise<string> {
   const { data, error } = await supabase
     .from("ml_oauth_token")
     .select("*")
-    .eq("id", ROW_ID)
+    .limit(1)
     .maybeSingle();
 
   if (error) throw new Error("Falha ao ler o token do Mercado Livre: " + error.message);
