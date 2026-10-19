@@ -90,12 +90,31 @@ export function computeScore(product: Product, priceRange: PriceRange): ScoreRes
     reputation: reputation.available,
   };
 
-  const total =
-    SCORE_WEIGHTS.price * points.price +
-    SCORE_WEIGHTS.rating * points.rating +
-    SCORE_WEIGHTS.reviews * points.reviews +
-    SCORE_WEIGHTS.shipping * points.shipping +
-    SCORE_WEIGHTS.reputation * points.reputation;
+  // Anúncios encontrados automaticamente no Mercado Livre não trazem nota,
+  // avaliações nem reputação do vendedor (a API de busca não devolve esses
+  // campos) — então antes esses 3 critérios (55% do peso) sempre entravam
+  // como um valor neutro fixo (50 pts), inflando artificialmente o score
+  // final de todo produto real. Agora o peso é redistribuído só entre os
+  // critérios que de fato têm dado disponível para aquele produto.
+  const criteria = [
+    { weight: SCORE_WEIGHTS.price, pts: points.price, avail: available.price },
+    { weight: SCORE_WEIGHTS.rating, pts: points.rating, avail: available.rating },
+    { weight: SCORE_WEIGHTS.reviews, pts: points.reviews, avail: available.reviews },
+    { weight: SCORE_WEIGHTS.shipping, pts: points.shipping, avail: available.shipping },
+    { weight: SCORE_WEIGHTS.reputation, pts: points.reputation, avail: available.reputation },
+  ];
+  const availableWeight = criteria.filter((c) => c.avail).reduce((acc, c) => acc + c.weight, 0);
+
+  let total: number;
+  if (availableWeight <= 0) {
+    // Nenhum critério disponível (caso extremo): neutro.
+    total = 50;
+  } else {
+    const weightedPoints = criteria
+      .filter((c) => c.avail)
+      .reduce((acc, c) => acc + c.weight * c.pts, 0);
+    total = weightedPoints / availableWeight;
+  }
 
   return { score: Math.round(clampPts(total)), points, available };
 }

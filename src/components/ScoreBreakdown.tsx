@@ -11,7 +11,7 @@ export default function ScoreBreakdown({ result }: { result: ScoreResult }) {
           </span>
           <span className="sb-points">
             {Math.round(result.points[r.key])} pts
-            {!result.available[r.key] && <span className="sb-na"> · não disponível (neutro)</span>}
+            {!result.available[r.key] && <span className="sb-na"> · não disponível (não entra no cálculo)</span>}
           </span>
         </div>
       ))}
