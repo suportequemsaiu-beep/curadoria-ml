@@ -107,9 +107,31 @@ export async function runMlSearch(): Promise<RunMlSearchResult[]> {
       }));
 
       if (rows.length > 0) {
+        // Descobre quais desses anúncios já existem na tabela, para só gravar
+        // status/found_at explicitamente nos que são realmente novos — sem
+        // depender de um valor padrão da coluna no Supabase (que nunca foi
+        // confirmado) e sem jamais sobrescrever o status de revisão de um
+        // anúncio que já estava salvo.
+        const mlIds = rows.map((r) => r.ml_id);
+        const { data: existingRows, error: selectError } = await supabase
+          .from("found_products")
+          .select("ml_id")
+          .in("ml_id", mlIds);
+
+        if (selectError) {
+          summary.push({ keyword, found: rows.length, upserted: 0, error: selectError.message });
+          continue;
+        }
+
+        const existingIds = new Set((existingRows || []).map((r) => r.ml_id as string));
+        const foundAt = new Date().toISOString();
+        const finalRows = rows.map((r) =>
+          existingIds.has(r.ml_id) ? r : { ...r, status: "novo", found_at: foundAt }
+        );
+
         const { error } = await supabase
           .from("found_products")
-          .upsert(rows, { onConflict: "ml_id" });
+          .upsert(finalRows, { onConflict: "ml_id" });
 
         if (error) {
           summary.push({ keyword, found: rows.length, upserted: 0, error: error.message });

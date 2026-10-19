@@ -83,6 +83,22 @@ export default function CuradoriaApp() {
 
   const onStatusChange = (id: string | number, status: Status) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+
+    // Produtos achados pela busca automática no Mercado Livre (identificados pelo
+    // mlbId) também têm o status salvo no servidor, para a decisão de curadoria
+    // não ficar presa só neste navegador/aparelho.
+    const product = products.find((p) => p.id === id);
+    if (product?.mlbId) {
+      fetch("/api/found-products/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mlId: product.mlbId, status }),
+      }).catch(() => {
+        // Sincronizar com o servidor é um bônus: uma falha de rede aqui não deve
+        // travar a tela. Nesse caso o produto pode reaparecer como "novo" em
+        // outro aparelho até a próxima tentativa.
+      });
+    }
   };
 
   const handleAffiliateLinkChange = (id: string | number, val: string) => {
