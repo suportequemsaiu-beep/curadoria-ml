@@ -13,7 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Chamar rota de busca
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -sS -f \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "https://curadoria-ml.vercel.app/api/cron/search-ml"
+          # Se o secret não existir no repositório, ele chega aqui vazio.
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::O secret CRON_SECRET não está configurado neste repositório (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+          code=$(curl -sS -o resp.txt -w "%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "https://curadoria-ml.vercel.app/api/cron/search-ml")
+          echo "HTTP $code"
+          cat resp.txt
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::A rota respondeu HTTP $code: $(head -c 300 resp.txt)"
+            exit 1
+          fi
