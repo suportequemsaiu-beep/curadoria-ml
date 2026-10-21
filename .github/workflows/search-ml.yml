@@ -1,11 +1,18 @@
 name: Busca automática no Mercado Livre
 
 on:
-  schedule:
-    # Roda 6x por dia (a cada 4h, em UTC). O Vercel Hobby só permite cron
-    # 1x/dia, por isso usamos o GitHub Actions (gratuito) para chamar a
-    # rota protegida com mais frequência.
-    - cron: "0 */4 * * *"
+  # AGENDAMENTO PAUSADO (20/10/2026): o secret CRON_SECRET ainda não foi
+  # criado no GitHub e o Mercado Livre ainda não liberou a busca para a
+  # aplicação (403), então cada execução só falhava e mandava e-mail.
+  # Para religar: crie o secret CRON_SECRET (mesmo valor do Vercel) e
+  # descomente as 5 linhas abaixo. Enquanto isso, dá para rodar manualmente
+  # pela aba Actions > "Run workflow".
+  #
+  # schedule:
+  #   # Roda 6x por dia (a cada 4h, em UTC). O Vercel Hobby só permite cron
+  #   # 1x/dia, por isso usamos o GitHub Actions (gratuito) para chamar a
+  #   # rota protegida com mais frequência.
+  #   - cron: "0 */4 * * *"
   workflow_dispatch: {}
 
 jobs:
